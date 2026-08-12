@@ -85,6 +85,61 @@ def main() -> int:
     if kot and (kx == len(kot) or kx == 0):
         fails.append(f'「言葉」枠 {len(kot)}問の答えが全部同じ（×={kx}）。毎回1問必ず出るので確実に当たる')
 
+    # ⑥-2 手がかりの総当たり検査
+    #     「長い方を選ぶ」で81%当たる、といった穴を人が思いつく前に機械で潰す。
+    #     私が思いついた手がかりだけ潰しても、別の手がかりが残る。だから総当たりする。
+    CUES = [
+        ('一番長い', lambda q, o: len(o['x']) == max(len(x['x']) for x in q['opts'])),
+        ('一番短い', lambda q, o: len(o['x']) == min(len(x['x']) for x in q['opts'])),
+        ('句点あり', lambda q, o: '。' in o['x']),
+        ('句点なし', lambda q, o: '。' not in o['x']),
+        ('読点あり', lambda q, o: '、' in o['x']),
+        ('読点なし', lambda q, o: '、' not in o['x']),
+        ('はい始まり', lambda q, o: o['x'].startswith('はい')),
+        ('数字あり', lambda q, o: re.search(r'[0-9０-９]', o['x']) is not None),
+        ('ませんを含む', lambda q, o: 'ません' in o['x']),
+        ('ご〜を含む', lambda q, o: 'ご' in o['x']),
+        ('確認を含む', lambda q, o: '確認' in o['x']),
+        ('ただし逆接', lambda q, o: re.search(r'(^|。|、)ただ(し|、)', o['x']) is not None),
+        ('ですで終わる', lambda q, o: o['x'].endswith('です')),
+        ('ますで終わる', lambda q, o: o['x'].endswith('ます')),
+        ('カギ括弧あり', lambda q, o: '「' in o['x']),
+        ('しょうで終わる', lambda q, o: o['x'].endswith('しょう')),
+    ]
+    worst = []
+    for name, f in CUES:
+        hit = used = 0
+        for q in sjt:
+            c = [o for o in q['opts'] if f(q, o)]
+            if len(c) == 1:
+                used += 1
+                hit += (c[0]['r'] == 'ok')
+        if used >= 10:
+            r = hit / used * 100
+            worst.append((r, name, hit, used))
+            if r > 55:
+                fails.append(f'「{name}方を選ぶ」だけで {hit}/{used} ({r:.0f}%) 当たる。偶然は33%')
+    worst.sort(reverse=True)
+
+    # ⑥-3 同じ言い回しが特定の役割にだけ繰り返し出ていないか
+    #     不正解に足した定型句（「気にしなくて大丈夫です」等）が3問に並ぶと、
+    #     それ自体が新しい手がかりになる。人が思いつく前に機械で止める。
+    from collections import defaultdict
+    phr = defaultdict(list)
+    for q in sjt:
+        for o in q['opts']:
+            body = o['x']
+            for L in (8, 10):
+                for k in range(len(body) - L + 1):
+                    phr[body[k:k + L]].append(o['r'])
+    for ph, roles in phr.items():
+        if len(roles) >= 3:
+            s_ok = sum(1 for r in roles if r == 'ok')
+            if s_ok == 0 or s_ok == len(roles):
+                side = '正解' if s_ok else '不正解'
+                fails.append(f'「{ph}」が{side}の選択肢だけに{len(roles)}回出ている（言い回しが手がかりになる）')
+                break
+
     # ⑦ 画面の見出し・説明に、指す先が画面に無い指示語が入っていないか
     #    「そう聞かれたら」「こう聞かれます」を2回作ってしまったので機械で止める。
     ui = re.sub(r'const BANK=\[.*?\];\n', '', src, flags=re.S)
@@ -116,6 +171,9 @@ def main() -> int:
     print(f'  正解だけが最長 : {longest}/{len(sjt)} ({rate:.1f}%)  ※偶然なら33%')
     print(f'  正解/不正解の字数比: {ratio:.2f}倍')
     print(f'  ○×の×比率     : {x/len(ox)*100:.0f}%')
+    if worst:
+        top = worst[:3]
+        print('  手がかりの最悪3件: ' + ' / '.join(f'{n} {h}/{u}({r:.0f}%)' for r, n, h, u in top))
     print(f'  問題あり       : {len(fails)}')
     for f in fails: print('   ✗ ' + f)
     return 1 if fails else 0
