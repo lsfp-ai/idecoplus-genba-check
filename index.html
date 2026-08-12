@@ -169,11 +169,11 @@ function home(){
   build(); $('prog').textContent=''; const n=$('next'); n.textContent='はじめる'; n.disabled=false;
   n.onclick=()=>{screen='quiz';i=0;log=[];render()};
   $('app').innerHTML=`<div class="card"><p class="lead">金融アドバイザー向け</p>
-   <h2>経営者に、そう聞かれたら。<br>あなたなら、どう答えますか。</h2>
+   <h2>経営者からも、従業員からも、<br>こう聞かれます。どう答えますか。</h2>
    <p>商談で実際に飛んでくる場面を <strong>${Q.length}問</strong>。<strong>7〜10分</strong>です。</p>
    <ul>
      <li>点数も、合否も出しません。</li>
-     <li>返すのは「<strong>あなたが選んだ言い方</strong>」と「<strong>こう言えます</strong>」の対だけです。</li>
+     <li>返すのは「<strong>あなたが選んだ言い方</strong>」と「<strong>こう言えます</strong>」の見比べだけです。</li>
      <li>すべて<strong>2026年12月1日施行の改正後</strong>のルールです。</li>
    </ul>
    <div class="hint" style="background:var(--ok-bg);color:var(--ok)"><b>ここは、間違えるための場所です。</b>商談で間違えないために。点数はつけません。記録は端末の中だけです。</div>
