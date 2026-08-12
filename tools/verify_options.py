@@ -140,6 +140,22 @@ def main() -> int:
                 fails.append(f'「{ph}」が{side}の選択肢だけに{len(roles)}回出ている（言い回しが手がかりになる）')
                 break
 
+    # ⑥-4 解説が読める形か（太字だらけ・長すぎ）
+    #     太字が3文字に1文字あると、どこが山場か分からない。実測で平均35%だった。
+    for i, q in enumerate(bank):
+        ex = q.get('ex') or ''
+        plain = re.sub('<[^>]+>', '', ex).replace(' ', '')
+        bold = re.sub('<[^>]+>', '', ''.join(re.findall(r'<strong>(.*?)</strong>', ex, re.S))).replace(' ', '')
+        if plain and len(bold) / len(plain) > 0.25:
+            fails.append(f'Q{i} の解説は太字が {len(bold)/len(plain)*100:.0f}%（25%超）。どこが山場か分からない')
+        if len(plain) > 450:
+            fails.append(f'Q{i} の解説が {len(plain)}字（450字超）。スマホで読み切れない')
+        for para in ex.split('<br><br>'):
+            n = len(re.findall(r'<strong>', para))
+            if n > 1:
+                fails.append(f'Q{i} の解説に、1段落で太字が{n}本ある段落がある')
+                break
+
     # ⑦ 画面の見出し・説明に、指す先が画面に無い指示語が入っていないか
     #    「そう聞かれたら」「こう聞かれます」を2回作ってしまったので機械で止める。
     ui = re.sub(r'const BANK=\[.*?\];\n', '', src, flags=re.S)
