@@ -10,8 +10,11 @@ from collections import Counter
 HERE = pathlib.Path(__file__).resolve().parent.parent
 
 # これまで実際に作ってしまった不自然な言い回し。再発したら止める。
-BANNED = ['置ける額', '動かせないお金', '年金だけ乗り', '分が乗り', '形に乗ら',
-          '報酬を得ます', '事故', '地雷', '危険な発言', '加藤 博確定']
+BANNED = ['置ける額', '動かせないお金', '年金だけ乗り', '分が乗り', '形に乗ら', '分は乗ら',
+          '報酬を得ます', '事故', '地雷', '危険な発言', '加藤 博確定',
+          # 詰める言い回し（撤去したのにマークの理由へ残っていたもの）
+          '分かっていない人に見える', '信用を失', '見抜か', '責められ', '取り返しがつかない',
+          '放棄している', '矛先', '引受先']
 
 def main() -> int:
     src = (HERE / 'index.html').read_text(encoding='utf-8')
@@ -43,11 +46,32 @@ def main() -> int:
         fails.append(f'正解の平均が不正解の {ratio:.2f}倍（{statistics.mean(lo):.1f}字 / {statistics.mean(ot):.1f}字）')
 
     # ④ 一度直した不自然な言い回しの再発
+    #    ⚠ 以前は line/ask/ex/opts しか見ておらず、**マークの理由と根拠が検査から漏れていた**。
+    #      実際に「分かっていない人に見える」「信用を失う」「乗らない」がそこに残っていた。
+    #      利用者の目に入る文字列は全部入れる。
     for i, q in enumerate(bank):
-        blob = ' '.join([q.get('line') or '', q.get('ask') or '', q.get('ex') or ''] +
-                        [o['x'] for o in (q.get('opts') or [])])
+        parts = [q.get('line') or '', q.get('ask') or '', q.get('scene') or '',
+                 q.get('ex') or '', q.get('src') or '']
+        for sub, why in (q.get('m') or []):
+            parts += [sub, why]
+        for o in (q.get('opts') or []):
+            parts.append(o['x'])
+            for sub, why in (o.get('m') or []):
+                parts += [sub, why]
+        blob = ' '.join(parts)
         for w in BANNED:
             if w in blob: fails.append(f'Q{i} に「{w}」が再発している')
+
+    # ④-2 マークの理由が短すぎて何を指すか分からないもの
+    for i, q in enumerate(bank):
+        reasons = [why for _, why in (q.get('m') or [])]
+        for o in (q.get('opts') or []):
+            reasons += [why for _, why in (o.get('m') or [])]
+        for why in reasons:
+            if len(why) < 10:
+                fails.append(f'Q{i} のマークの理由「{why}」が短すぎる（何を指すか分からない）')
+            if why.startswith('同上'):
+                fails.append(f'Q{i} のマークの理由が「同上」で始まる（並びは毎回変わるので何を指すか分からない）')
 
     # ⑤ ○×の答えの偏り（全部×で通るか）
     ox = [q for q in bank if q['t'] == 'ox']
