@@ -15,10 +15,12 @@
 body{margin:0;background:var(--bg);color:var(--tx);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Yu Gothic",sans-serif;
 font-size:17px;line-height:1.75;padding:0 0 104px}
 .wrap{max-width:640px;margin:0 auto;padding:0 18px}
-header{background:var(--green);color:#fff;padding:16px 0 14px;margin-bottom:20px}
-header .wrap{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+header{background:var(--green);color:#fff;padding:18px 0;margin-bottom:20px}
+header .wrap{display:flex;align-items:center;gap:18px;flex-wrap:nowrap}
+header .lsfpmark{flex:0 0 auto}
+header .htext{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;min-width:0}
 h1{font-size:18px;margin:0}.asof{font-size:13px;opacity:.85}
-.svc{flex-basis:100%;font-size:12.5px;letter-spacing:.06em;opacity:.8;margin:0 0 4px;font-weight:600}
+.svc{flex-basis:100%;font-size:12.5px;letter-spacing:.06em;opacity:.85;margin:0 0 3px;font-weight:600}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}
 h2{font-size:21px;margin:0 0 14px;line-height:1.5}
 .lead{font-size:15px;color:var(--sub);margin:0 0 6px}.note{font-size:14px;color:var(--sub)}
@@ -84,9 +86,14 @@ mark.cue{background:#ffe9a8;color:inherit;padding:1px 3px;border-radius:3px;
 </style>
 </head>
 <body>
-<header><div class="wrap"><p class="svc">iDeCo+サポートサービス</p>
+<header><div class="wrap">
+<svg class="lsfpmark" width="34" height="34" viewBox="0 0 100 100" role="img" aria-label="LSFP">
+  <path fill-rule="evenodd" fill="#FFFFFF" d="M10 46 A40 40 0 1 1 90 46 A40 40 0 1 1 10 46 Z M39.5 46 A10.5 10.5 0 1 0 60.5 46 A10.5 10.5 0 1 0 39.5 46 Z"></path>
+  <path fill="#FFFFFF" d="M30 75 C 28 84, 24 90, 17 95 C 28 93, 38 89, 45 84 C 40 81, 35 78, 30 75 Z"></path>
+</svg>
+<div class="htext"><p class="svc">iDeCo+サポートサービス</p>
 <h1>あなたなら、どう答えますか</h1>
-<span class="asof">2026年12月以降のルール</span></div></header>
+<span class="asof">2026年12月以降のルール</span></div></div></header>
 <div class="wrap" id="app"></div>
 <div class="bar"><div class="wrap"><div class="prog" id="prog"></div>
 <button class="next" id="next">次へ</button></div></div>
