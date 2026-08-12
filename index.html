@@ -219,11 +219,11 @@ function choose(k,list){
     h+='<div class="swap"><div class="a"><b>あなたが選んだ言い方</b>'+o.x+'</div>'
       +'<div class="b"><b>こう言えます</b>'+ok.x+'</div></div>';
   }
-  // 分かれ目になる語句を、その場で示す（フィッシング訓練で効果差が最も大きかった要素）
+  // 違う語句を、その場で色を付けて示す（フィッシング訓練で効果差が最も大きかった要素）
   let cq=null, ct='', ttl='';
-  if(q.t==='ox'){ if(q.m){ cq=q.m; ct=q.line; ttl=(q.ans==='×')?'ここで分かれます':'ここが決め手'; } }
-  else if(o.m){ cq=o.m; ct=o.x; ttl='あなたが選んだ言い方は、ここで分かれます'; }
-  else { const bad=list.find(x=>x.m); if(bad){ cq=bad.m; ct=bad.x; ttl='避けたい言い方は、ここで分かれます'; } }
+  if(q.t==='ox'){ if(q.m){ cq=q.m; ct=q.line; ttl=(q.ans==='×')?'違うのはここ':'決め手はここ'; } }
+  else if(o.m){ cq=o.m; ct=o.x; ttl='違うのはここ'; }
+  else { const bad=list.find(x=>x.m); if(bad){ cq=bad.m; ct=bad.x; ttl='違うのはここ'; } }
   if(cq) h+='<div class="cuebox"><b>'+ttl+'</b>'+cueHTML(ct,cq)+'</div>';
   h+='<div class="explain">'+q.ex+'<div class="src '+(q.st==='lsfp'?'lsfp':'law')+'">'
     +(q.st==='lsfp'?'これは制度の決まりではなく、<b>制作者（株式会社LSFP）の考え方</b>です':'根拠：'+q.src)+'</div></div>';
