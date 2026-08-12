@@ -31,6 +31,10 @@ button.opt .n{flex:0 0 26px;height:26px;border-radius:50%;background:var(--tint)
 display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin-top:2px}
 button.opt:hover{border-color:var(--green-l)}
 button.opt.pick-ok{border-color:var(--ok);background:var(--ok-bg)}
+.say{background:var(--tint);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:16px 0 12px;line-height:1.75}
+.sayrow{display:flex;gap:10px}.sayrow .opt{justify-content:center;font-weight:600}
+.todo{background:var(--ok-bg);color:var(--ok);border-radius:12px;padding:14px 16px;margin:10px 0;line-height:1.8}
+.todo b{display:block;margin-bottom:4px;font-size:13px;opacity:.85}
 button.opt.pick-ng{border-color:var(--ng);background:var(--ng-bg)}
 button.opt.pick-warn{border-color:var(--warn);background:var(--warn-bg)}
 button.opt.show{border-color:var(--ok)}
@@ -95,9 +99,10 @@ const qid=q=>(q.ask||q.line||'')+'#'+(q.opts?q.opts.map(o=>o.x).sort().join('|')
 function load(){ try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return {}} }
 function save(m){ try{localStorage.setItem(KEY,JSON.stringify(m))}catch(e){} }
 const today=()=>Math.floor(Date.now()/86400000);
-function grade(q,ok){
+function grade(q,ok,spoke){
   const m=load(), id=qid(q), r=m[id]||{box:0};
-  r.box = ok ? Math.min(r.box+1, STEP.length-1) : 0;
+  // 選択肢からは選べても、口が動かなかった場面は「できた」ではない。次回もう一度出す
+  r.box = (ok && spoke!==false) ? Math.min(r.box+1, STEP.length-1) : 0;
   r.due = today() + STEP[r.box];
   r.miss = (r.miss||0) + (ok?0:1);
   m[id]=r; save(m);
@@ -108,7 +113,7 @@ function priority(q){                       // 小さいほど先に出す
   if(r.due<=today()) return 0 - (r.miss||0);// 期限到来。間違えた回数が多いほど先
   return 2;                                 // まだ寝かせる
 }
-let Q=[], i=0, log=[], screen='home', RETRY=0;
+let Q=[], i=0, log=[], screen='home', RETRY=0, said=null;
 const $=id=>document.getElementById(id);
 function sh(a){for(let k=a.length-1;k>0;k--){const j=(Math.random()*(k+1))|0;[a[k],a[j]]=[a[j],a[k]];}return a;}
 
@@ -172,8 +177,9 @@ function home(){
    <h2>経営者と従業員からの質問に、<br>あなたなら、どう答えますか。</h2>
    <p>商談で実際に飛んでくる場面を <strong>${Q.length}問</strong>。<strong>7〜10分</strong>です。</p>
    <ul>
+     <li><strong>選択肢は、先に出しません。</strong>面談に選択肢は出てこないからです。まず声に出して答えてから、選択肢と解説が出ます。</li>
      <li>点数も、合否も出しません。</li>
-     <li>返すのは「<strong>あなたが選んだ言い方</strong>」と「<strong>こう言えます</strong>」の見比べだけです。</li>
+     <li>最後に返すのは「<strong>言葉が出てこなかった場面</strong>」と、その<strong>言い方</strong>です。</li>
      <li>すべて<strong>2026年12月1日施行の改正後</strong>のルールです。</li>
    </ul>
    <div class="hint" style="background:var(--ok-bg);color:var(--ok)"><b>ここは、間違えるための場所です。</b>商談で間違えないために。点数はつけません。記録は端末の中だけです。</div>
@@ -190,14 +196,27 @@ function question(){
   else { if(q.scene) h+='<p class="scene">'+q.scene+'</p>';
          if(q.ask) h+='<div class="said">'+q.ask+'</div>';
          h+='<p class="ask">あなたなら、どう'+(q.ask?'答え':'説明し')+'ますか。</p>'; }
-  h+='<div id="s1"></div><div id="fb"></div></div>';
+  h+='<div id="s0"></div><div id="s1"></div><div id="fb"></div></div>';
   $('app').innerHTML=h;
-  const s1=$('s1');
   const list = q.t==='ox' ? [{x:'正しい',r:q.ans==='○'?'ok':'ng2'},{x:'誤り',r:q.ans==='×'?'ok':'ng2'}]
                           : q.opts;
-  list.forEach((o,k)=>{ const b=document.createElement('button'); b.className='opt';
-    b.innerHTML='<span class="n">'+(k+1)+'</span><span>'+o.x+'</span>';
-    b.onclick=()=>choose(k,list); s1.appendChild(b); });
+  // 面談に選択肢は出てこない。先に自分の言葉で答えてから、選択肢を見る。
+  const s0=$('s0');
+  s0.innerHTML='<div class="say"><b>まず、声に出して答えてみてください。</b>'
+    +(q.t==='ox'?'この説明が正しいかどうかと、その理由を。':'そのまま経営者に返す言葉で。')
+    +'<br><span class="note">選択肢は、言ってみたあとに出ます。</span></div>';
+  const mk=(lbl,ok)=>{ const b=document.createElement('button'); b.className='opt sayb'; b.textContent=lbl;
+    b.onclick=()=>{ said=ok; s0.querySelectorAll('.sayb').forEach(x=>{x.disabled=true}); b.classList.add(ok?'pick-ok':'pick-warn'); showOpts(); }; return b; };
+  const row=document.createElement('div'); row.className='sayrow';
+  row.appendChild(mk('言えた',true)); row.appendChild(mk('出てこなかった',false)); s0.appendChild(row);
+  said=null;
+  function showOpts(){ const s1=$('s1');
+    s1.innerHTML='<p class="ask" style="margin-top:18px">では、次のうちどれに近いですか。</p>';
+    list.forEach((o,k)=>{ const b=document.createElement('button'); b.className='opt';
+      b.innerHTML='<span class="n">'+(k+1)+'</span><span>'+o.x+'</span>';
+      b.onclick=()=>choose(k,list); s1.appendChild(b); });
+    s1.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
   const n=$('next'); n.disabled=true; n.textContent=(i===Q.length-1)?'結果を見る':'次へ';
   n.onclick=()=>{ i++; if(i>=Q.length) screen='result'; render(); window.scrollTo({top:0}); };
 }
@@ -233,8 +252,8 @@ function choose(k,list){
   h+='<div class="explain">'+q.ex+'<div class="src '+(q.st==='lsfp'?'lsfp':'law')+'">'
     +(q.st==='lsfp'?'これは制度の決まりではなく、<b>制作者（株式会社LSFP）の考え方</b>です'+(/条|取得|【一次】/.test(q.src)?'<br>参照：'+q.src.replace(/^制作者（株式会社LSFP）の考え方[（／]?/,'').replace(/）$/,''):''):'根拠：'+q.src)+'</div></div>';
   $('fb').innerHTML=h;
-  grade(q, o.r==='ok');
-  log.push({dom:q.dom, t:q.t, r:o.r, mine:o.x, ok:ok?ok.x:'', line:q.ask||q.line, ans:q.ans, why:(q.m&&q.m[0]?q.m[0][1]:'')});
+  grade(q, o.r==='ok', said);
+  log.push({said:said, dom:q.dom, t:q.t, r:o.r, mine:o.x, ok:ok?ok.x:'', line:q.ask||q.line, ans:q.ans, why:(q.m&&q.m[0]?q.m[0][1]:'')});
   $('next').disabled=false;
   $('fb').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -244,9 +263,20 @@ function result(){
   const ng=log.filter(l=>l.r==='ng'), timid=log.filter(l=>l.r==='timid');
   const oxNg=log.filter(l=>l.t==='ox'&&l.r!=='ok'), wrong=log.filter(l=>l.r==='wrong');
   const fix=ng.concat(wrong);
-  let h='<div class="card">';
+  // 口が動かなかった場面を最優先で返す。選択肢から選べたかどうかより、こちらが本番に近い
+  const mute=log.filter(l=>l.said===false&&l.t!=='ox'&&l.ok);
+  let h='';
+  if(mute.length){
+    h+='<div class="card"><h2>明日の面談で、まずこの'+Math.min(mute.length,3)+'つ。</h2>'
+      +'<p class="note" style="margin-top:-6px">言葉が出てこなかった場面です。声に出して1回ずつ読んでから閉じてください。</p>';
+    mute.slice(0,3).forEach(m=>{ h+='<div class="todo"><b>'+m.line+'</b>'+m.ok+'</div>'; });
+    if(mute.length>3) h+='<p class="note">残りの '+(mute.length-3)+' 場面は、この下にまとめています。</p>';
+    h+='</div>';
+  }
+  h+='<div class="card">';
   h+= fix.length===0 && timid.length===0
-    ? '<h2>今回の'+Q.length+'場面では、直すところはありませんでした。</h2>'
+    ? (mute.length?'<h2>選んだ言い方は、'+Q.length+'場面とも直すところはありませんでした。</h2>'
+                 :'<h2>今回の'+Q.length+'場面では、直すところはありませんでした。</h2>')
     : '<h2>直せる言い回しが、'+(fix.length+timid.length)+'か所 見つかりました。</h2>';
   h+='</div>';
   fix.forEach(m=>{ h+='<div class="card"><div class="swap"><div class="a"><b>あなたが選んだ言い方</b>'+m.mine
