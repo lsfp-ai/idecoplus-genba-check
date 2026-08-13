@@ -16,4 +16,5 @@ exclude:
   - idecoplus_evidence_ledger_v1.md
   - idecoplus_test_design_v1.md
   - tools
+  - docs
   - README.md
