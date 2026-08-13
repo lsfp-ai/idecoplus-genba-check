@@ -1,0 +1,19 @@
+# GitHub Pages（Jekyll）の公開対象から、作業中の草案を外す。
+#
+# 2026-08-13、先行版をアドバイザー25名へ配る直前に判明：
+# 没にした設問草案・口述の生データ・根拠台帳が、公開URLからそのまま読めていた
+# （いずれも HTTP 200）。禁止語や旧表現が残っているだけでなく、
+# **直す前の誤った設問が「正しいもの」として読まれる**危険があった。
+#
+# ファイルは削除しない（履歴・経緯として残す）。公開だけ止める。
+# 戻したいときは、このファイルの exclude から外す。
+exclude:
+  - idecoplus_questions_draft_v1.md
+  - idecoplus_questions_draft_v2.md
+  - idecoplus_questions_draft_v3.md
+  - idecoplus_questions_atomized_v1.md
+  - idecoplus_questions_raw_20260812.md
+  - idecoplus_evidence_ledger_v1.md
+  - idecoplus_test_design_v1.md
+  - tools
+  - README.md
