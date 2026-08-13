@@ -203,14 +203,14 @@ function home(){
   n.onclick=()=>{screen='quiz';i=0;log=[];render()};
   $('app').innerHTML=`<div class="card"><p class="lead">金融アドバイザー向け</p>
    <h2>経営者と従業員からの質問に、<br>あなたなら、どう答えますか。</h2>
-   <p>商談で実際に飛んでくる場面を <strong>${Q.length}問</strong>。<strong>7〜10分</strong>です。</p>
+   <p>面談で聞かれることを <strong>${Q.length}問</strong>。<strong>7〜10分</strong>です。</p>
    <ul>
      <li><strong>選択肢は、先に出しません。</strong>面談に選択肢は出てこないからです。まず声に出して答えてから、選択肢と解説が出ます。</li>
      <li>点数も、合否も出しません。</li>
-     <li>最後に返すのは「<strong>言葉が出てこなかった場面</strong>」と、その<strong>言い方</strong>です。</li>
+     <li>最後にお返しするのは「<strong>言葉が出てこなかった場面</strong>」と、その<strong>言い方</strong>です。</li>
      <li>すべて<strong>2026年12月1日施行の改正後</strong>のルールです。</li>
    </ul>
-   <div class="hint" style="background:var(--ok-bg);color:var(--ok)"><b>ここは、間違えるための場所です。</b>商談で間違えないために。点数はつけません。記録は端末の中だけです。</div>
+   <div class="hint" style="background:var(--ok-bg);color:var(--ok)">点数も合否も出しません。記録は、お使いの端末の中だけに残ります。</div>
    ${RETRY?'<div class="hint">前回まちがえた '+RETRY+'問 が、今回もう一度出ます。</div>':''}
    <div class="hint"><strong>持ち帰ってよい場面もあります。</strong>ただし調べれば分かることは、その場で答えられた方が話が早く進みます。その区別も設問に入れています。</div>
    <p style="margin:16px 0 0"><a href="./manual.html" style="color:var(--green-l);font-weight:600">使い方を見る（1分）→</a></p>
