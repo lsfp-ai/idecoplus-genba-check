@@ -237,7 +237,7 @@ function question(){
     ? '<div class="say"><b>まず、声に出して答えてみてください。</b>'
       +(q.t==='ox'?'この説明が正しいかどうかと、その理由を。':'そのまま経営者に返す言葉で。')
       +'<br><span class="note">選択肢は、言ってみたあとに出ます。</span></div>'
-    : '<p class="note" style="margin:16px 0 8px">声に出してから、下を押してください。</p>';
+    : '';
   const mk=(lbl,ok)=>{ const b=document.createElement('button'); b.className='opt sayb'; b.textContent=lbl;
     b.onclick=()=>{ said=ok; s0.querySelectorAll('.sayb').forEach(x=>{x.disabled=true}); b.classList.add(ok?'pick-ok':'pick-warn'); showOpts(); }; return b; };
   const row=document.createElement('div'); row.className='sayrow';
