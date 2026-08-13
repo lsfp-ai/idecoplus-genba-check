@@ -65,6 +65,8 @@ CALM = re.compile(r"大丈夫です|安心です|問題ありません|心配い
 COND = re.compile(r"ただし|限り|場合|とはいえ|ただ、|例外")
 # 禁止語（大げさ・AI造語）
 BANNED = ["事故", "地雷"]   # 加藤 博が実際に撤去させた語のみ。推測で足さない
+# 呼び方の統一（2026-08-13 加藤 博）：使うのは「事業主」または「経営者」。「社長」は使わない
+WORDING = {"社長": "「事業主」または「経営者」を使う"}
 # 設問文の述語（これが選択肢に1つも無ければ噛み合っていない）
 PRED = re.compile(r"(もらえ|できる|なる|かかる|要る|いる|変わる|下がる|上がる|使える|選べる|出せる)")
 
@@ -114,7 +116,25 @@ def main():
             if w in blob:
                 ng.append(f"No.{no} J5 禁止語「{w}」")
 
-    print(f"検査した設問: {len(B)} 問")
+        # J6 呼び方の統一
+        for w, how in WORDING.items():
+            if w in blob:
+                ng.append(f"No.{no} J6 呼び方「{w}」→ {how}")
+
+    # 設問データ以外の顧客到達物も見る（ゲートが index.html しか見ていなかった）
+    for f in ("manual.html", "README.md", "docs/announcement.md"):
+        fp = HERE / f
+        if not fp.exists():
+            continue
+        txt = strip(fp.read_text(encoding="utf-8"))
+        for w in BANNED:
+            if w in txt:
+                ng.append(f"{f} J5 禁止語「{w}」")
+        for w, how in WORDING.items():
+            if w in txt:
+                ng.append(f"{f} J6 呼び方「{w}」→ {how}")
+
+    print(f"検査した設問: {len(B)} 問（＋ manual.html / README.md も検査）")
     print(f"  問題あり  : {len(ng)}")
     for x in ng:
         print("   ✗ " + x)
