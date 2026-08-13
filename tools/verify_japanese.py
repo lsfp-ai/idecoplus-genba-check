@@ -121,7 +121,9 @@ def main():
             if w in blob:
                 ng.append(f"No.{no} J6 呼び方「{w}」→ {how}")
 
-    # 設問データ以外の顧客到達物も見る（ゲートが index.html しか見ていなかった）
+    # 設問データ以外の顧客到達物も見る（ゲートが index.html しか見ていなかった）。
+    # docs/lessons.md は対象に入れない。禁止語・旧表現を「使ってはいけない例」として
+    # 引用している文書なので、検査すると必ず鳴る。外へ出るものだけを見る。
     for f in ("manual.html", "README.md", "docs/announcement.md"):
         fp = HERE / f
         if not fp.exists():
