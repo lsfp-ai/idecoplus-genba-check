@@ -201,6 +201,8 @@ function render(){ if(screen==='home')return home(); if(screen==='result')return
 function home(){
   build(); $('prog').textContent=''; const n=$('next'); n.textContent='はじめる'; n.disabled=false;
   n.onclick=()=>{screen='quiz';i=0;log=[];render()};
+// 更新のお知らせ。マニュアルの「更新履歴」の一番上と必ず揃える（tools/verify_update_log.py が機械で照合する）。
+const UPDATED='2026年8月14日', UPDATED_WHAT='3問追加（No.124〜126）。言い方を全体で見直しました。';
   $('app').innerHTML=`<div class="card"><p class="lead">金融アドバイザー向け</p>
    <h2>経営者と従業員からの質問に、<br>あなたなら、どう答えますか。</h2>
    <p>面談で聞かれることを <strong>${Q.length}問</strong>。<strong>7〜10分</strong>です。</p>
@@ -213,6 +215,7 @@ function home(){
    <div class="hint" style="background:var(--ok-bg);color:var(--ok)">点数も合否も出しません。記録は、お使いの端末の中だけに残ります。</div>
    ${RETRY?'<div class="hint">前回まちがえた '+RETRY+'問 が、今回もう一度出ます。</div>':''}
    <div class="hint"><strong>持ち帰ってよい場面もあります。</strong>ただし調べれば分かることは、その場で答えられた方が話が早く進みます。その区別も設問に入れています。</div>
+   <div class="hint"><strong>更新のお知らせ</strong>（${UPDATED}）　${UPDATED_WHAT}<br><a href="./manual.html#updates" style="color:var(--green-l);font-weight:600">これまでの更新履歴を見る →</a></div>
    <p style="margin:16px 0 0"><a href="./manual.html" style="color:var(--green-l);font-weight:600">使い方を見る（1分）→</a></p>
   </div>
   <div class="card"><p class="note">記録は端末の中だけです。どこにも送信しません。認定でも資格でもありません。</p>
