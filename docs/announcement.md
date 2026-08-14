@@ -54,6 +54,13 @@ https://lsfp-ai.github.io/idecoplus-genba-check/
 
 この論点は毎回必ず1問出るようにしてあります。
 
+■ 更新のお知らせ
+
+いただいたご指摘は、直したうえで更新履歴に載せます。
+ご自身が挙げてくださった点がどうなったか、そこでご確認いただけます。
+
+https://lsfp-ai.github.io/idecoplus-genba-check/manual.html#updates
+
 ■ お願い
 
 違和感がありましたら、ご遠慮なくこのチャットに上げてください。
