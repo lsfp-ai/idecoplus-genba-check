@@ -1,4 +1,4 @@
-name: One-shot patch No.44 start period
+name: One-shot patch Aug 18 fixes
 
 on:
   pull_request:
@@ -15,15 +15,26 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
-      - name: Patch No.44 wording and update history
+      - name: Patch No.42 and No.44 with update history
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          # 1) No.44 本体を 4〜5か月基準へ統一
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
+
+          # No.42: iDeCo+の掛金についての質問だと単独で読んでも分かる形にする。
+          old42 = '（経営者）業績次第で掛金を増やしたり減らしたりできる？'
+          new42 = '（経営者）iDeCo＋の掛金は、業績次第で増やしたり減らしたりできる？'
+          if old42 in s:
+              if s.count(old42) != 1:
+                  raise SystemExit(f'Expected exactly 1 occurrence of No.42 old wording, found {s.count(old42)}')
+              s = s.replace(old42, new42, 1)
+          elif new42 not in s:
+              raise SystemExit('No.42 wording not found')
+
+          # No.44: 開始目安を4〜5か月基準へ統一する。
           pairs = [
               ('3〜4か月はみてください', '4〜5か月はみてください'),
               ('3〜4か月という目安は言える', '4〜5か月という目安は言える'),
@@ -35,30 +46,37 @@ jobs:
               if old in s:
                   if s.count(old) != 1:
                       raise SystemExit(f'Expected exactly 1 occurrence of {old!r}, found {s.count(old)}')
-                  s = s.replace(old, new)
+                  s = s.replace(old, new, 1)
               elif new not in s:
                   raise SystemExit(f'Neither old nor new wording found: {old!r}')
 
-          # 2) ホーム画面の更新表示を更新履歴と揃える
-          old_update = "const UPDATED='2026年8月14日', UPDATED_WHAT='5問追加（No.124〜128）。言い方を全体で見直しました。';"
-          new_update = "const UPDATED='2026年8月18日', UPDATED_WHAT='No.44の開始目安を4〜5か月に修正しました。';"
-          if old_update in s:
-              s = s.replace(old_update, new_update, 1)
-          elif new_update not in s:
+          # ホーム画面の更新表示をmanual.htmlの最新履歴と揃える。
+          import re
+          pat = r"const UPDATED='[^']+', UPDATED_WHAT='[^']*';"
+          new_update = "const UPDATED='2026年8月18日', UPDATED_WHAT='No.42・No.44を修正しました。';"
+          if not re.search(pat, s):
               raise SystemExit('index.html update notice not found')
+          s = re.sub(pat, new_update, s, count=1)
           p.write_text(s, encoding='utf-8')
 
-          # 3) manual.html の更新履歴に今回の修正を追加
+          # manual.html 更新履歴。今日の2件を同じ日付にまとめる。
           mp = Path('manual.html')
           m = mp.read_text(encoding='utf-8')
           entry = '''<h3>2026年8月18日</h3>
 <ul>
+<li><b>No.42の質問文に「iDeCo＋」を明記しました。</b>「業績次第で掛金を増やしたり減らしたりできる？」だけでは何の掛金か分かりにくいため、「iDeCo＋の掛金は」と明示しました。回答内容は変えていません。</li>
 <li><b>No.44の開始目安を「4〜5か月」に修正しました。</b>「3〜4か月」「3か月以上」という案内をやめ、正解・よくある言い間違い・解説・誤答の補足をすべて4〜5か月基準に統一しました。実務上は3か月での開始を見込まない前提で案内します。</li>
 </ul>
 
 '''
-          if '<h3>2026年8月18日</h3>' not in m:
-              marker = '<h3>2026年8月14日</h3>'
+          marker = '<h3>2026年8月14日</h3>'
+          if '<h3>2026年8月18日</h3>' in m:
+              start = m.index('<h3>2026年8月18日</h3>')
+              end = m.find('<h3>', start + len('<h3>2026年8月18日</h3>'))
+              if end == -1:
+                  raise SystemExit('Could not find end of Aug 18 update block')
+              m = m[:start] + entry + m[end:]
+          else:
               if marker not in m:
                   raise SystemExit('manual.html update-history insertion point not found')
               m = m.replace(marker, entry + marker, 1)
@@ -77,5 +95,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git diff --cached --quiet && exit 0
-          git commit -m 'fix: set No.44 start period to 4-5 months and record history'
+          git commit -m 'fix: record No.42 and No.44 updates'
           git push origin HEAD:${{ github.head_ref }}
