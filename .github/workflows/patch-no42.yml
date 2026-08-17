@@ -1,0 +1,40 @@
+name: One-shot patch No.42 wording
+
+on:
+  push:
+    paths:
+      - '.github/workflows/patch-no42.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch No.42 wording
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+          old = '（経営者）業績次第で掛金を増やしたり減らしたりできる？'
+          new = '（経営者）iDeCo＋の掛金は、業績次第で増やしたり減らしたりできる？'
+          count = s.count(old)
+          if count != 1:
+              raise SystemExit(f'Expected exactly 1 old string, found {count}')
+          p.write_text(s.replace(old, new), encoding='utf-8')
+          PY
+      - name: Run repository preflight
+        run: python3 tools/preflight.py
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: clarify No.42 as iDeCo+ question'
+          git push
