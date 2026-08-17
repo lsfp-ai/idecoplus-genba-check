@@ -15,11 +15,13 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
-      - name: Patch No.44 wording
+      - name: Patch No.44 wording and update history
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+
+          # 1) No.44 本体を 4〜5か月基準へ統一
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
           pairs = [
@@ -36,7 +38,31 @@ jobs:
                   s = s.replace(old, new)
               elif new not in s:
                   raise SystemExit(f'Neither old nor new wording found: {old!r}')
+
+          # 2) ホーム画面の更新表示を更新履歴と揃える
+          old_update = "const UPDATED='2026年8月14日', UPDATED_WHAT='5問追加（No.124〜128）。言い方を全体で見直しました。';"
+          new_update = "const UPDATED='2026年8月18日', UPDATED_WHAT='No.44の開始目安を4〜5か月に修正しました。';"
+          if old_update in s:
+              s = s.replace(old_update, new_update, 1)
+          elif new_update not in s:
+              raise SystemExit('index.html update notice not found')
           p.write_text(s, encoding='utf-8')
+
+          # 3) manual.html の更新履歴に今回の修正を追加
+          mp = Path('manual.html')
+          m = mp.read_text(encoding='utf-8')
+          entry = '''<h3>2026年8月18日</h3>
+<ul>
+<li><b>No.44の開始目安を「4〜5か月」に修正しました。</b>「3〜4か月」「3か月以上」という案内をやめ、正解・よくある言い間違い・解説・誤答の補足をすべて4〜5か月基準に統一しました。実務上は3か月での開始を見込まない前提で案内します。</li>
+</ul>
+
+'''
+          if '<h3>2026年8月18日</h3>' not in m:
+              marker = '<h3>2026年8月14日</h3>'
+              if marker not in m:
+                  raise SystemExit('manual.html update-history insertion point not found')
+              m = m.replace(marker, entry + marker, 1)
+          mp.write_text(m, encoding='utf-8')
           PY
       - name: Run repository preflight
         run: python3 tools/preflight.py
@@ -51,5 +77,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git diff --cached --quiet && exit 0
-          git commit -m 'fix: set No.44 start period to 4-5 months'
+          git commit -m 'fix: set No.44 start period to 4-5 months and record history'
           git push origin HEAD:${{ github.head_ref }}
