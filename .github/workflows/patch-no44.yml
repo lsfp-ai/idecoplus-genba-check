@@ -1,8 +1,10 @@
 name: One-shot patch Aug 18 fixes
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  push:
+    branches: [main]
+    paths:
+      - 'docs/.patch-aug18-run'
 
 permissions:
   contents: write
@@ -13,18 +15,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: main
           fetch-depth: 0
       - name: Patch No.42 and No.44 with update history
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           p = Path('index.html')
           s = p.read_text(encoding='utf-8')
 
-          # No.42: iDeCo+の掛金についての質問だと単独で読んでも分かる形にする。
+          # No.42: 質問だけ読んでもiDeCo+の掛金だと分かるようにする。
           old42 = '（経営者）業績次第で掛金を増やしたり減らしたりできる？'
           new42 = '（経営者）iDeCo＋の掛金は、業績次第で増やしたり減らしたりできる？'
           if old42 in s:
@@ -50,8 +53,7 @@ jobs:
               elif new not in s:
                   raise SystemExit(f'Neither old nor new wording found: {old!r}')
 
-          # ホーム画面の更新表示をmanual.htmlの最新履歴と揃える。
-          import re
+          # ホームの更新表示を、マニュアル更新履歴の最新日付と揃える。
           pat = r"const UPDATED='[^']+', UPDATED_WHAT='[^']*';"
           new_update = "const UPDATED='2026年8月18日', UPDATED_WHAT='No.42・No.44を修正しました。';"
           if not re.search(pat, s):
@@ -86,14 +88,14 @@ jobs:
         run: python3 tools/preflight.py
       - name: Remove one-shot files
         run: |
-          rm -f docs/.patch-no44-trigger
+          rm -f docs/.patch-aug18-run
           rm -f .github/workflows/patch-no44.yml
-      - name: Commit patch to PR branch
+      - name: Commit to main
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
           git diff --cached --quiet && exit 0
-          git commit -m 'fix: record No.42 and No.44 updates'
-          git push origin HEAD:${{ github.head_ref }}
+          git commit -m 'fix: record Aug 18 No.42 and No.44 updates'
+          git push origin HEAD:main
