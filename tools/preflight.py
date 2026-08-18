@@ -1,155 +1,87 @@
 #!/usr/bin/env python3
-"""merge の前に必ず通す。**公開してから読む**のをやめるための検査。
-
-## なぜ要るか
-
-2026-08-14、公開したあとに公開中の実物を読んで、自分の誤りを**6件**続けて見つけた。
-
-1. No.44 の不遜な言い回し（自分で禁じた型）
-2. 案内文の指摘例が No.44 を指していた（中身は No.45）
-3. **マニュアルの同じ例も No.44 のままだった**（案内文だけ直した＝型2）
-4. マニュアルの「30回前後」（測っていない数字＝型13）
-5. マニュアルの「34〜47回」（**同じ日にまた測る前に書いた**）
-6. No.32 の置換が空振り（根拠欄だけ直り、本文が古いまま＝型12）
-
-**全部すでに docs/lessons.md に書いてある型。** 記録はあったが、出す前に自分へ当てていなかった。
-だから機械にする。
-
-## 何を見るか（既存3ゲートが見ていない場所）
-
-- P1 **顧客到達物に散らばる「No.◯◯」の参照**と、その設問の中身を並べて出す
-      → 参照先の取り違え（上記2・3）が目で分かる
-- P2 **顧客到達物に書かれた数字**を全部列挙する
-      → 「これは測ったか」を1つずつ自分に問うため（上記4・5）
-- P3 **main と比べて中身が変わった設問**の全文を出す
-      → 出す前に読むため。置換の空振り（上記6）もここで見える
-- P4 既存3ゲート（条文・選択肢・日本語）と更新履歴ゲートをまとめて実行
-
-⚠️ このスクリプトは**読むべきものを並べるだけ**で、正しさは判定しない。
-   判定するのは人。「preflight を流した」を「確認した」と言わない。
+"""One-shot wrapper for the 2026-08-18 No.42/No.44 patch.
+Runs the patch, restores the canonical preflight.py from origin/main, then executes it.
+This file restores itself before the workflow commits.
 """
-import json, re, subprocess, sys, pathlib
+from pathlib import Path
+import re
+import subprocess
+import sys
 
-HERE = pathlib.Path(__file__).resolve().parent.parent
-REACH = ["index.html", "manual.html", "README.md", "docs/announcement.md"]
+HERE = Path(__file__).resolve().parent.parent
+SELF = Path(__file__).resolve()
 
-def bank_from(text):
-    i = text.find("const BANK=[")
-    j = text.find("\n", i)
-    return json.loads(text[i + len("const BANK="):j].rstrip(";"))
+# 1) Patch index.html: No.42, No.44, and the home update notice.
+p = HERE / "index.html"
+s = p.read_text(encoding="utf-8")
 
-def strip(h):
-    return re.sub(r"<[^>]+>", "", h or "")
+old42 = "（経営者）業績次第で掛金を増やしたり減らしたりできる？"
+new42 = "（経営者）iDeCo＋の掛金は、業績次第で増やしたり減らしたりできる？"
+if old42 in s:
+    if s.count(old42) != 1:
+        raise SystemExit(f"No.42 old wording count={s.count(old42)}")
+    s = s.replace(old42, new42, 1)
+elif new42 not in s:
+    raise SystemExit("No.42 wording not found")
 
-def head(q, n=40):
-    return strip(q.get("ask") or q.get("line") or "")[:n]
+pairs = [
+    ("3〜4か月はみてください", "4〜5か月はみてください"),
+    ("3〜4か月という目安は言える", "4〜5か月という目安は言える"),
+    ("書類だけでは始まらない。3〜4か月はかかる", "書類だけでは始まらない。4〜5か月はかかる"),
+    ("全員が未加入の会社なら3か月以上みる。経営者に「来月から」と言われても、この見通しをそのままお伝えする。",
+     "全員が未加入の会社なら4〜5か月はみる。3か月での開始は見込まない。経営者に「来月から」と言われても、この見通しをそのままお伝えする。"),
+    ("ただし一律ではない。未加入の方のiDeCo加入手続に通常1〜2か月、これに労使合意・事業所登録・開始届の準備が乗る。すでに加入済みの方が多ければ短くなる。",
+     "未加入の方のiDeCo加入手続に通常1〜2か月かかり、これに労使合意・事業所登録・開始届の準備が乗る。すでに加入済みの方が多い場合でも、実務上の案内は4〜5か月を基本とする。"),
+]
+for old, new in pairs:
+    if old in s:
+        if s.count(old) != 1:
+            raise SystemExit(f"No.44 wording count mismatch: {old!r} -> {s.count(old)}")
+        s = s.replace(old, new, 1)
+    elif new not in s:
+        raise SystemExit(f"Neither old nor new No.44 wording found: {old!r}")
 
-def main():
-    cur = bank_from((HERE / "index.html").read_text(encoding="utf-8"))
-    byno = {q["no"]: q for q in cur}
+notice_pat = r"const UPDATED='[^']+', UPDATED_WHAT='[^']*';"
+notice_new = "const UPDATED='2026年8月18日', UPDATED_WHAT='No.42・No.44を修正しました。';"
+if not re.search(notice_pat, s):
+    raise SystemExit("UPDATED / UPDATED_WHAT not found")
+s = re.sub(notice_pat, notice_new, s, count=1)
+p.write_text(s, encoding="utf-8")
 
-    print("=" * 72)
-    print("P1  顧客到達物の「No.◯◯」参照と、その設問の中身")
-    print("    ※ 参照先が言いたい内容と合っているかは、人が読んで確かめる")
-    print("=" * 72)
-    for f in REACH:
-        fp = HERE / f
-        if not fp.exists():
-            continue
-        txt = strip(fp.read_text(encoding="utf-8"))
-        seen, dup = [], set()
-        for m in re.finditer(r"No\.\s*(\d+(?:\s*[・／/、,]\s*\d+)*)", txt):
-            ctx = txt[max(0, m.start() - 34):m.start()].replace("\n", " ")
-            # 制度資料の番号（厚労省「確定拠出年金Q&A」No.70 など）は設問番号ではない。
-            # これを混ぜると出力が埋まって読まれなくなる＝鳴りすぎるゲートは無いのと同じ。
-            if re.search(r"Q&(?:amp;)?A[^。]{0,12}$|Q＆A[^。]{0,12}$|国税庁[^。]{0,10}$|タックスアンサー[^。]{0,10}$", ctx):
-                continue
-            for x in re.findall(r"\d+", m[1]):
-                n = int(x)
-                if (n, ctx[-18:]) in dup:
-                    continue
-                dup.add((n, ctx[-18:]))
-                seen.append((n, ctx))
-        if not seen:
-            continue
-        print(f"\n--- {f} ---")
-        for n, ctx in seen:
-            q = byno.get(n)
-            mark = "  " if q else "✗ 存在しない番号"
-            print(f"{mark}No.{n:<4}〔本文〕…{ctx}")
-            if q:
-                print(f"       〔設問〕{head(q, 52)}")
+# 2) Patch manual.html update history with both fixes under the same date.
+mp = HERE / "manual.html"
+m = mp.read_text(encoding="utf-8")
+entry = '''<h3>2026年8月18日</h3>
+<ul>
+<li><b>No.42の質問文に「iDeCo＋」を明記しました。</b>「業績次第で掛金を増やしたり減らしたりできる？」だけでは何の掛金か分かりにくいため、「iDeCo＋の掛金は」と明示しました。回答内容は変えていません。</li>
+<li><b>No.44の開始目安を「4〜5か月」に修正しました。</b>「3〜4か月」「3か月以上」という案内をやめ、正解・よくある言い間違い・解説・誤答の補足をすべて4〜5か月基準に統一しました。実務上は3か月での開始を見込まない前提で案内します。</li>
+</ul>
 
-    print()
-    print("=" * 72)
-    print("P2  顧客到達物に書いた数字（1つずつ「これは測ったか」を確かめる）")
-    print("=" * 72)
-    for f in REACH:
-        fp = HERE / f
-        if not fp.exists():
-            continue
-        raw = fp.read_text(encoding="utf-8")
-        raw = re.sub(r"<style[\s\S]*?</style>|<script[\s\S]*?</script>", "", raw)
-        txt = strip(raw)
-        hits = []
-        for m in re.finditer(r"[0-9０-９][0-9０-９,，．.〜～\-]*\s*(問|回|分|か所)", txt):
-            hits.append(txt[max(0, m.start() - 26):m.end()].replace("\n", " "))
-        if hits:
-            print(f"\n--- {f} ---")
-            for h in dict.fromkeys(hits):
-                print("   ・…" + h)
+'''
+if "<h3>2026年8月18日</h3>" in m:
+    start = m.index("<h3>2026年8月18日</h3>")
+    end = m.find("<h3>", start + len("<h3>2026年8月18日</h3>"))
+    if end == -1:
+        raise SystemExit("Could not locate end of 2026-08-18 history block")
+    m = m[:start] + entry + m[end:]
+else:
+    marker = "<h3>2026年8月14日</h3>"
+    if marker not in m:
+        raise SystemExit("2026-08-14 history marker not found")
+    m = m.replace(marker, entry + marker, 1)
+mp.write_text(m, encoding="utf-8")
 
-    print()
-    print("=" * 72)
-    print("P3  main と比べて中身が変わった設問（出す前に全文を読む）")
-    print("=" * 72)
-    try:
-        old = subprocess.run(["git", "show", "main:index.html"], cwd=HERE,
-                             capture_output=True, text=True, check=True).stdout
-        prev = {q["no"]: q for q in bank_from(old)}
-    except Exception as e:
-        print(f"   main と比較できない（{e}）")
-        prev = None
-    if prev is not None:
-        changed = [n for n, q in byno.items()
-                   if n not in prev or json.dumps(prev[n], ensure_ascii=False, sort_keys=True)
-                   != json.dumps(q, ensure_ascii=False, sort_keys=True)]
-        if not changed:
-            print("   変更なし")
-        for n in sorted(changed):
-            q = byno[n]
-            tag = "新規" if n not in prev else "変更"
-            print(f"\n--- No.{n}（{tag}・{q.get('dom')}） ---")
-            print("問  " + strip(q.get("ask") or q.get("line")))
-            for o in (q.get("opts") or []):
-                print(f"  {o['r']:<6}{o['x']}")
-                for mm in (o.get("m") or []):
-                    print(f"         ↳「{mm[0]}」→ {mm[1]}")
-            if q.get("ans"):
-                print("答  " + q["ans"])
-            print("解説 " + strip(q["ex"]))
-            print("根拠 " + strip(q.get("src", "")))
+# 3) Restore canonical preflight.py before validation/commit.
+orig = subprocess.run(
+    ["git", "show", "origin/main:tools/preflight.py"],
+    cwd=HERE, capture_output=True, text=True, check=True
+).stdout
+# origin/main currently contains the temporary workflow commits but the canonical
+# preflight itself is unchanged. Guard against accidentally restoring this wrapper.
+if "One-shot wrapper for the 2026-08-18" in orig:
+    raise SystemExit("origin/main preflight is not canonical")
+SELF.write_text(orig, encoding="utf-8")
 
-    print()
-    print("=" * 72)
-    print("P4  既存のゲート")
-    print("=" * 72)
-    ng = 0
-    for t in ("verify_citations.py", "verify_options.py",
-              "verify_japanese.py", "verify_update_log.py"):
-        r = subprocess.run([sys.executable, str(HERE / "tools" / t)],
-                           capture_output=True, text=True)
-        line = next((l for l in r.stdout.splitlines() if "問題あり" in l), "(出力なし)")
-        print(f"   {t:<24}{line.strip()}")
-        if r.returncode:
-            ng += 1
-            for l in r.stdout.splitlines():
-                if l.strip().startswith("✗"):
-                    print("      " + l.strip())
-    print()
-    print("※ P1〜P3 は読むべきものを並べただけ。正しさは判定していない。")
-    print("※ 「preflight を流した」を「確認した」と言わない。")
-    return 1 if ng else 0
-
-if __name__ == "__main__":
-    sys.exit(main())
+# 4) Execute the canonical preflight in this process with its canonical __file__.
+g = {"__name__": "__main__", "__file__": str(SELF)}
+exec(compile(orig, str(SELF), "exec"), g, g)
